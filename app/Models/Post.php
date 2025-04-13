@@ -85,6 +85,11 @@ class Post extends Model
             return null;
         }
         
+        // Check if image_path already contains http/https protocol
+        if (preg_match('/^https?:\/\//', $this->image_path)) {
+            return $this->image_path;
+        }
+        
         return url('/img/post/' . basename($this->image_path));
     }
 }

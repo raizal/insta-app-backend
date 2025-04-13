@@ -73,6 +73,11 @@ class User extends Authenticatable
             return null;
         }
         
+        // Check if profile_picture already contains http/https protocol
+        if (preg_match('/^https?:\/\//', $this->profile_picture)) {
+            return $this->profile_picture;
+        }
+        
         return url('/img/profile/' . basename($this->profile_picture));
     }
 
