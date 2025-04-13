@@ -58,7 +58,7 @@ class WebAuthController extends Controller
 
         return response()->json([
             'success' => false,
-            'errors' => ['login' => ['The provided credentials do not match our records.']]
+            'errors' => ['login' => ['Invalid credentials. Please try again.']]
         ], 401);
     }
 
