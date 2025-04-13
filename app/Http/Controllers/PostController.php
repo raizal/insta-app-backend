@@ -24,11 +24,25 @@ class PostController extends Controller
     {
         $perPage = $request->query('per_page', 10);
         
-        $posts = Post::with(['user:id,name,email,username,profile_picture'])
+        // Get IDs of users that the authenticated user follows
+        $followingIds = Auth::user()->following()->pluck('users.id');
+        
+        // Include the authenticated user's own posts in the feed
+        $followingIds[] = Auth::id();
+        
+        // Get posts from followed users (and own posts)
+        $posts = Post::whereIn('user_id', $followingIds)
+            ->with(['user:id,name,username,profile_picture'])
             ->withCount(['likes', 'comments'])
             ->latest()
             ->paginate($perPage);
-
+        
+        // Add a "liked" attribute to each post
+        $posts->getCollection()->transform(function ($post) {
+            $post->liked = $post->likes()->where('user_id', Auth::id())->exists();
+            return $post;
+        });
+        
         return response()->json([
             'success' => true,
             'data' => $posts
@@ -263,6 +277,102 @@ class PostController extends Controller
         return response()->json([
             'success' => true,
             'data' => $posts
+        ]);
+    }
+
+    /**
+     * Get posts from users that the authenticated user follows (feed posts).
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getFeedPosts(Request $request): JsonResponse
+    {
+        $perPage = $request->query('per_page', 10);
+        
+        // Get IDs of users that the authenticated user follows
+        $followingIds = Auth::user()->following()->pluck('users.id');
+        
+        // Get posts from followed users
+        $posts = Post::whereIn('user_id', $followingIds)
+            ->with(['user:id,name,username,profile_picture'])
+            ->withCount(['likes', 'comments'])
+            ->latest()
+            ->paginate($perPage);
+        
+        // Add a "liked" attribute to each post
+        $posts->getCollection()->transform(function ($post) {
+            $post->liked = $post->likes()->where('user_id', Auth::id())->exists();
+            return $post;
+        });
+        
+        return response()->json([
+            'success' => true,
+            'data' => $posts
+        ]);
+    }
+
+    /**
+     * Get posts by a specific user (for profile pages).
+     * 
+     * @param Request $request
+     * @param string $username
+     * @return JsonResponse
+     */
+    public function getUserPosts(Request $request, string $username): JsonResponse
+    {
+        $perPage = $request->query('per_page', 10);
+        
+        // Find the user by username
+        $user = \App\Models\User::where('username', $username)->first();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+        
+        // Get the user's posts
+        $posts = Post::where('user_id', $user->id)
+            ->with(['user:id,name,username,profile_picture'])
+            ->withCount(['likes', 'comments'])
+            ->latest()
+            ->paginate($perPage);
+        
+        // Add a "liked" attribute to each post
+        if (Auth::check()) {
+            $posts->getCollection()->transform(function ($post) {
+                $post->liked = $post->likes()->where('user_id', Auth::id())->exists();
+                return $post;
+            });
+        }
+        
+        // Add follow status if authenticated
+        $followStatus = null;
+        if (Auth::check() && Auth::id() !== $user->id) {
+            $followStatus = [
+                'is_following' => Auth::user()->isFollowing($user),
+                'is_followed_by' => Auth::user()->isFollowedBy($user)
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'posts' => $posts,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'profile_picture' => $user->profile_picture,
+                    'profile_picture_url' => $user->profile_picture_url,
+                    'followers_count' => $user->followers_count,
+                    'following_count' => $user->following_count,
+                    'posts_count' => $user->posts()->count(),
+                    'follow_status' => $followStatus
+                ]
+            ]
         ]);
     }
 }

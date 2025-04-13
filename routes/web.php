@@ -4,6 +4,7 @@ use App\Http\Controllers\WebAuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\FollowController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -84,9 +85,18 @@ Route::prefix('web')->group(function () {
         Route::delete('/profile/picture', [ProfileController::class, 'removeProfilePicture']);
         Route::get('/profile/{username}', [ProfileController::class, 'getUserProfile']);
         
+        // Follow routes
+        Route::post('/users/{username}/follow', [FollowController::class, 'follow']);
+        Route::post('/users/{username}/unfollow', [FollowController::class, 'unfollow']);
+        Route::post('/users/{username}/toggle-follow', [FollowController::class, 'toggleFollow']);
+        Route::get('/users/{username}/followers', [FollowController::class, 'getFollowersAndFollowing']);
+        Route::get('/users/{username}/follow-status', [FollowController::class, 'checkFollowStatus']);
+        
         // Post routes
         Route::resource('posts', PostController::class);
         Route::post('/posts/{id}/like', [PostController::class, 'toggleLike']);
+        Route::get('/feed', [PostController::class, 'getFeedPosts']);
+        Route::get('/users/{username}/posts', [PostController::class, 'getUserPosts']);
         
         // Comment routes
         Route::resource('comments', CommentController::class, ['only' => ['destroy']]);
