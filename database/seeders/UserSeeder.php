@@ -23,7 +23,7 @@ class UserSeeder extends Seeder
                 'name' => $faker->name(),
                 'email' => $faker->unique()->safeEmail(),
                 'username' => $faker->unique()->userName(),
-                'profile_picture' => "https://source.unsplash.com/random/300x300?profile&sig={$i}",
+                'profile_picture' => "https://picsum.photos/id/{$i}/300/300",
                 'email_verified_at' => now(),
                 'password' => bcrypt('password'), // Default password
                 'created_at' => $faker->dateTimeBetween('-1 year', '-1 month'),
